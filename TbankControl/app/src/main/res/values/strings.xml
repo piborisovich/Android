@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">T-bankBalanceChecker</string>
+    <string name="ButtonText">Обновить баланс</string>
+    <string name="welcomeLine">Нажмите обновить для загрузки</string>
+</resources>
