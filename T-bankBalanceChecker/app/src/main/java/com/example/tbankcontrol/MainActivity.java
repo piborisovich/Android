@@ -12,15 +12,16 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.snackbar.Snackbar;
 
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
-    private TextView balanceTextView;
     private TBankApiService apiService;
-
+    private AccountAdapter adapter;
     // Переменные для управления периодическим обновлением
     private final Handler timerHandler = new Handler(Looper.getMainLooper());
     private Runnable timerRunnable;
@@ -33,8 +34,27 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        balanceTextView = findViewById(R.id.balanceTextView);
+        androidx.constraintlayout.widget.ConstraintLayout mainLayout = findViewById(R.id.main_layout);
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(
+                mainLayout,
+                (v, windowInsets) -> {
+                    androidx.core.graphics.Insets systemBars = windowInsets.getInsets(
+                            androidx.core.view.WindowInsetsCompat.Type.systemBars()
+                    );
+
+                    // Устанавливаем внутренние отступы (padding) для всего экрана
+                    // systemBars.bottom — это высота нижней панели "Домой"
+                    v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+                    return windowInsets;
+                });
+
+        RecyclerView accountsView = findViewById(R.id.accountsRecyclerView);
         Button refreshButton = findViewById(R.id.refreshButton);
+
+        accountsView.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new AccountAdapter();
+        accountsView.setAdapter(adapter);
+
 
         apiService = new TBankApiService(this);
 
@@ -54,17 +74,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadAccountData() {
-        balanceTextView.setText("Загрузка данных...");
 
         apiService.fetchBankAccounts(new TBankApiService.ApiCallback() {
             @Override
-            public void onSuccess(String accountDetails) {
-                balanceTextView.setText(accountDetails);
+            public void onSuccess(java.util.List<AccountAdapter.AccountItem> accountsList) {
+                adapter.setAccounts(accountsList);
             }
 
             @Override
             public void onError(String errorMessage) {
-                balanceTextView.setText("Не удалось получить данные");
 
                 View rootView = findViewById(R.id.main_layout);
 

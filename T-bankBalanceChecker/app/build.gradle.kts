@@ -32,8 +32,10 @@ android {
 
         // Получаем токен или пустую строку, если его нет
         val token = secretProperties.getProperty("TBANK_INVEST_TOKEN") ?: ""
+        val threshold = secretProperties.getProperty("BALANCE_THRESHOLD_RUB") ?: ""
 
         buildConfigField("String", "INVEST_TOKEN", "\"$token\"")
+        buildConfigField("double", "BALANCE_THRESHOLD", threshold)
     }
 
     buildTypes {

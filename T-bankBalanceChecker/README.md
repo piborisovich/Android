@@ -17,8 +17,10 @@
    - создать файл ```local.properties``` в корне проекта
    - добавить в него строку вида ```TBANK_INVEST_TOKEN=<Токен>```, где
    ```<токен>``` - токен доступа, полученный в личном кабинете пользователя
-   Т-Ивестиции, и путь к SDK Android, например
+   Т-Ивестиции, путь к SDK Android, например
    ```sdk.dir=C\:\\Users\\User\\AppData\\Local\\Android\\Sdk```
+    и порог для индикации пониженного баланса
+   ```BALANCE_THRESHOLD_RUB=<порог>```
    
 3. Открыть проект в Android Studio и нажать "Run"
 
@@ -28,6 +30,8 @@
 sdk.dir=C\:\\Users\\User\\AppData\\Local\\Android\\Sdk
 
 TBANK_INVEST_TOKEN=14235234346456ар
+
+BALANCE_THRESHOLD_RUB=10000
 ```
 
  ## Требования и установка

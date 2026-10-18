@@ -90,7 +90,7 @@ public class TBankApiService {
     }
 
     public interface ApiCallback {
-        void onSuccess(String accountsInfo);
+        void onSuccess(java.util.List<AccountAdapter.AccountItem> accountsList);
         void onError(String errorMessage);
     }
 
@@ -124,7 +124,7 @@ public class TBankApiService {
                         }
 
                         String responseData = responseBody.body().string();
-                        String parsedData = parseBankAccountsJson(responseData);
+                        java.util.List<AccountAdapter.AccountItem> parsedData = parseBankAccountsJson(responseData);
 
                         mainHandler.post(() -> callback.onSuccess(parsedData));
                     } catch (Exception e) {
@@ -140,11 +140,13 @@ public class TBankApiService {
      * Парсинг ответа от GetBankAccounts
      * Ответ содержит массив "accounts", где у каждого счета есть "money" (объект MoneyValue)
      */
-    private String parseBankAccountsJson(String jsonStr) throws Exception {
+    private java.util.List<AccountAdapter.AccountItem> parseBankAccountsJson(String jsonStr) throws Exception {
+        java.util.List<AccountAdapter.AccountItem> list = new java.util.ArrayList<>();
         JSONObject jsonObject = new JSONObject(jsonStr);
 
         if (!jsonObject.has("bankAccounts")) {
-            return "Банковские счета не найдены.";
+            //return "Банковские счета не найдены.";
+            return list;
         }
 
         JSONArray accounts = jsonObject.getJSONArray("bankAccounts");
@@ -156,6 +158,8 @@ public class TBankApiService {
             // Получаем базовую информацию о счете
             String cardName = account.optString("name", "Дебетовая карта");
             String accountId = account.optString("id", "Не указан");
+
+            String shortNumber = tail(accountId, 4);
 
             // Обработка баланса (MoneyValue: units + nano)
             double balance = 0.0;
@@ -173,15 +177,16 @@ public class TBankApiService {
                     // Переводим nano-части в double (1 nano = 10^-9)
                     balance = units + ((double) nano / 1_000_000_000.0);
 
-                    result.append("💳 ").append(cardName).append("\n")
-                            .append("Номер: *").append(tail(accountId, 4)).append("\n")
-                            .append("Баланс: ").append(String.format(Locale.getDefault(), "%,.2f %s", balance, currency))
-                            .append("\n\n────────────────\n\n");
+                    list.add(new AccountAdapter.AccountItem(
+                            cardName,
+                            shortNumber,
+                            balance,
+                            currency));
                 }
             }
         }
 
-        return result.length() > 0 ? result.toString() : "Список счетов пуст.";
+        return list;
     }
 
     // Вспомогательный метод для отображения знака валюты

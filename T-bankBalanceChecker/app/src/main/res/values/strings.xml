@@ -2,4 +2,8 @@
     <string name="app_name">T-bankBalanceChecker</string>
     <string name="ButtonText">Обновить баланс</string>
     <string name="welcomeLine">Нажмите обновить для загрузки</string>
+    <string name="CardNameLabel">Название карты</string>
+    <string name="CardNumberLabel">Номер: *1234</string>
+    <string name="BalanceDefaultStr">0.00 ₽</string>
+    <string name="CardNumberPrefix">Номер: *%s</string>
 </resources>
