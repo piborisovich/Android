@@ -6,4 +6,6 @@
     <string name="CardNumberLabel">Номер: *1234</string>
     <string name="BalanceDefaultStr">0.00 ₽</string>
     <string name="CardNumberPrefix">Номер: *%s</string>
+    <string name="NotificationTitle">Мало средств</string>
+    <string name="NotificationPrefix">Баланс по счёту *%s ниже порогового значения</string>
 </resources>

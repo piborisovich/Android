@@ -159,7 +159,6 @@ public class TBankApiService {
             String cardName = account.optString("name", "Дебетовая карта");
             String accountId = account.optString("id", "Не указан");
 
-            String shortNumber = tail(accountId, 4);
 
             // Обработка баланса (MoneyValue: units + nano)
             double balance = 0.0;
@@ -179,7 +178,7 @@ public class TBankApiService {
 
                     list.add(new AccountAdapter.AccountItem(
                             cardName,
-                            shortNumber,
+                            accountId,
                             balance,
                             currency));
                 }
@@ -197,16 +196,5 @@ public class TBankApiService {
             case "eur": return "€";
             default: return isoCode.toUpperCase();
         }
-    }
-
-    // Получение последних N символов номера счета для маскирования
-    private String tail(String src) {
-        return tail(src, 1);
-    }
-
-    // Получение последних N символов номера счета для маскирования
-    private String tail(String src, int count) {
-        if (src == null || src.length() <= count) return src;
-        return src.substring(src.length() - count);
     }
 }
