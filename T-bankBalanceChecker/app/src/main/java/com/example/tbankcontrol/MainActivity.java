@@ -12,7 +12,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
@@ -21,6 +20,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
                 });
 
         RecyclerView accountsView = findViewById(R.id.accountsRecyclerView);
-        Button refreshButton = findViewById(R.id.refreshButton);
+        SwipeRefreshLayout swiper = findViewById(R.id.swipeRefreshLayout);
 
         accountsView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new AccountAdapter(BALANCE_THRESHOLD);
@@ -110,7 +110,13 @@ public class MainActivity extends AppCompatActivity {
 
         apiService = new TBankApiService(this);
 
-        refreshButton.setOnClickListener(v -> loadAccountData());
+        swiper.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                loadAccountData();
+                swiper.setRefreshing(false);
+            }
+        });
 
         // ЗАПУСК ПОСТОЯННОЙ СЛУЖБЫ ПЕРИОДИЧЕСКОГО ОБНОВЛЕНИЯ
         Intent serviceIntent = new Intent(this, TBankForegroundService.class);
