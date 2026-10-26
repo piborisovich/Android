@@ -11,25 +11,20 @@ import androidx.core.app.NotificationCompat;
 
 public class NotificationHelper {
     // Идентификатор канала и самого уведомления
-    private static final String CHANNEL_ID = "my_channel_id";
+    public static final String CHANNEL_ID = "TBankBackgroundChannel";
+    private static final int importance = NotificationManager.IMPORTANCE_DEFAULT; // Уровень важности
+    private static final CharSequence channel_name = "main_channel";
+    private static final String channel_description = "Channel for important app notifications";
     private static final int NOTIFICATION_ID = 101;
+    private static NotificationChannel serviceChannel = null;
+
+    public static NotificationChannel getChannel() {
+        return serviceChannel;
+    }
     public static void showNotification(Context context, String title, String message) {
+
         NotificationManager notificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-
-        //Создание канала уведомлений
-        if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ) {
-            CharSequence name = "main_channel";
-            String description = "Channel for important app notifications";
-            int importance = NotificationManager.IMPORTANCE_DEFAULT; // Уровень важности
-
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
-            channel.setDescription(description);
-
-            if (notificationManager != null) {
-                notificationManager.createNotificationChannel(channel);
-            }
-        }
 
         //Настройка действия при клике на уведомление (открытие MainActivity)
         Intent intent = new Intent(context, MainActivity.class);
@@ -52,9 +47,33 @@ public class NotificationHelper {
                 .setContentIntent(pendingIntent)          // Добавляем действие при клике
                 .setAutoCancel(true);                     // Удалять из шторки после клика
 
-        // 4. Показ уведомления
+        //Показ уведомления
         if (notificationManager != null) {
             notificationManager.notify(NOTIFICATION_ID, builder.build());
         }
     }
+
+    public static NotificationChannel createNotificationChannel(Context context) {
+
+        if ( serviceChannel != null ) {
+            return serviceChannel;
+        }
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if ( notificationManager == null ) {
+            return null;
+        }
+
+        if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ) {
+            serviceChannel = new NotificationChannel(CHANNEL_ID, channel_name, importance);
+            serviceChannel.setDescription(channel_description);
+
+            notificationManager.createNotificationChannel(serviceChannel);
+        }
+
+        return serviceChannel;
+    }
+
 }

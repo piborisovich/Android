@@ -49,6 +49,15 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
             this.isTracked = false;
         }
 
+        public AccountItem(String name, String number, double balance, String currency, boolean isTracked) {
+            this.name = name;
+            this.number = number;
+            this.shortNumber = tail(number, 4);
+            this.balance = balance;
+            this.currency = currency;
+            this.isTracked = isTracked;
+        }
+
         public String balanceString() {
             return String.format(Locale.getDefault(),
                     "%,.2f %s", balance, currency);

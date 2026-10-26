@@ -1,18 +1,18 @@
 package com.example.tbankcontrol;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
@@ -22,21 +22,47 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.snackbar.Snackbar;
-
-import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
     private static final double BALANCE_THRESHOLD = BuildConfig.BALANCE_THRESHOLD;
     private TBankApiService apiService;
     private AccountAdapter adapter;
-    // Переменные для управления периодическим обновлением
-    private final Handler timerHandler = new Handler(Looper.getMainLooper());
-    private Runnable timerRunnable;
-    // Интервал обновления в миллисекундах (30 000 мс = 30 секунд)
-    private static final long UPDATE_INTERVAL = 30000;
     //Ссылка на диалог
     private AlertDialog m_activeDialog = null;
+
+    private final BroadcastReceiver serviceUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            if (intent != null && "com.example.tbankcontrol.UPDATE_ACCOUNTS_ACTION".equals(intent.getAction())) {
+                String jsonStr = intent.getStringExtra("accounts_json");
+
+                if (jsonStr != null) {
+                    // Распаковываем JSON обратно в список объектов для адаптера
+                    List<AccountAdapter.AccountItem> newList = AppSettings.parseJsonToAdapterList(jsonStr);
+
+                    // Передаем новый список в адаптер
+                    if (adapter != null) {
+                        adapter.setAccounts(newList);
+                    }
+                }
+            }
+        }
+    };
+
+    private void loadCachedData() {
+        //Загрузка аккаунтов из КЭША
+        List<AccountAdapter.AccountItem> cachedAccounts = AppSettings.getInstance().cachedAccounts();
+
+        for (AccountAdapter.AccountItem item: cachedAccounts){
+            item.isTracked = AppSettings.getInstance().
+                    isNotificationEnabled(item.number);
+        }
+
+        adapter.setAccounts(cachedAccounts);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,16 +112,29 @@ public class MainActivity extends AppCompatActivity {
 
         refreshButton.setOnClickListener(v -> loadAccountData());
 
-        // Создаем задачу, которая будет выполняться циклически
-        timerRunnable = new Runnable() {
-            @Override
-            public void run() {
-                //Вызываем метод загрузки данных
-                loadAccountData();
-                //Планируем следующий запуск этой же задачи через заданный интервал
-                timerHandler.postDelayed(this, UPDATE_INTERVAL);
-            }
-        };
+        // ЗАПУСК ПОСТОЯННОЙ СЛУЖБЫ ПЕРИОДИЧЕСКОГО ОБНОВЛЕНИЯ
+        Intent serviceIntent = new Intent(this, TBankForegroundService.class);
+        serviceIntent.putExtra("BALANCE_THRESHOLD", BALANCE_THRESHOLD);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (isFinishing()) {
+            stopTbankService();
+        }
+    }
+
+    private void stopTbankService() {
+        Intent serviceIntent = new Intent(this, TBankForegroundService.class);
+        stopService(serviceIntent); // Отправляет сервису команду завершения
+        Log.d("TBankService", "MainActivity: Вызвана остановка сервиса");
     }
 
     private void loadAccountData() {
@@ -103,19 +142,10 @@ public class MainActivity extends AppCompatActivity {
         apiService.fetchBankAccounts(new TBankApiService.ApiCallback() {
             @Override
             public void onSuccess(java.util.List<AccountAdapter.AccountItem> accountsList) {
-
-                //Считываем состояние из файла (если было сохранено)
-                for (AccountAdapter.AccountItem item : accountsList) {
+                for (AccountAdapter.AccountItem item: accountsList){
                     item.isTracked = AppSettings.getInstance().
                             isNotificationEnabled(item.number);
-
-                    if (item.isTracked) {
-                        NotificationHelper.showNotification(MainActivity.this,
-                                getString(R.string.NotificationTitle),
-                                getString(R.string.NotificationPrefix, item.shortNumber));
-                    }
                 }
-
                 adapter.setAccounts(accountsList);
             }
 
@@ -150,23 +180,34 @@ public class MainActivity extends AppCompatActivity {
                 });
 
 
-                Log.e("MyServiceTAG", "MainActivity: ОnError: " + errorMessage);
+                Log.e("TBankService", "MainActivity: ОnError: " + errorMessage);
             }
         });
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
     protected void onResume() {
         super.onResume();
-        //Запускаем таймер
-        timerHandler.post(timerRunnable);
+
+        //Привязываем приемник к нашему уникальному системному экшену
+        IntentFilter filter = new android.content.IntentFilter("com.example.tbankcontrol.UPDATE_ACCOUNTS_ACTION");
+
+        // Для Android 14+ требуется явно указать флаг RECEIVER_EXPORTED или RECEIVER_NOT_EXPORTED
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(serviceUpdateReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(serviceUpdateReceiver, filter);
+        }
+
+        //Сразу же загружаем данные из SharedPreferences (чтобы не показывать пустой экран при старте)
+        loadCachedData();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        // ОБЯЗАТЕЛЬНО останавливаем таймер, когда приложение сворачивают,
-        // чтобы оно не выполняло сетевые запросы впустую и не тратило батарею
-        //timerHandler.removeCallbacks(timerRunnable);
+        // Обязательно отписываемся от получения сообщений, когда MainActivity уходит с экрана
+        unregisterReceiver(serviceUpdateReceiver);
     }
 }
